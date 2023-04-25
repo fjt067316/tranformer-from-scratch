@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+glove.6B/
+*.csv
+fr_words.txt

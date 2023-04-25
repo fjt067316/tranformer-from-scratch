@@ -38,11 +38,14 @@ public:
     }
 
     vector<vector<double>> single_head_attn(vector<vector<double>> pos_encoded_words){
-        vector<vector<double>> k(pos_encoded_words.size(), vector<double>(50));
-        vector<vector<double>> tmp(pos_encoded_words.size(),vector<double>(50, 0));
 
+        vector<vector<double>> tmp(pos_encoded_words.size(),vector<double>(50, 0));
         vector<vector<double>> q(pos_encoded_words.size(), vector<double>(pos_encoded_words[0].size()));
         vector<vector<double>> v(pos_encoded_words.size(), vector<double>(pos_encoded_words[0].size()));
+        vector<vector<double>> k(pos_encoded_words.size(), vector<double>(50));
+        
+
+
         res = pos_encoded_words;
         // v == pos_encoded_words
         for(int word_idx=0; word_idx<pos_encoded_words.size(); word_idx++){
@@ -74,6 +77,40 @@ public:
             }
         }
         return outputs;
+    }
+
+    vector<vector<double>> attn_k_v_q(vector<vector<double>> k_in, vector<vector<double>> v_in, vector<vector<double>> q_in){
+// https://towardsdatascience.com/transformers-explained-visually-part-3-multi-head-attention-deep-dive-1c1ff1024853
+        
+        // https://stats.stackexchange.com/questions/524043/what-are-exact-inputs-and-their-dimension-for-decoder-part-of-the-transformers
+        // q_in has a diffferent row size than k_in or v_in
+        vector<vector<double>> tmp(q_in.size(),vector<double>(k_in[0].size(), 0));
+
+        res = q_in;
+        // v == pos_encoded_words
+
+        // https://towardsdatascience.com/demystifying-efficient-self-attention-b3de61b9b0fb => "row-wise softmax" https://twitter.com/srush_nlp/status/1359582647522127889?lang=en 
+        for(int word_idx=0; word_idx<q_in.size(); word_idx++){
+            for(int i=0; i<k_in.size(); i++){ 
+                for(int j =0; j<q_in[0].size(); j++){
+                    tmp[word_idx][i] += q_in[word_idx][j]+k_in[i][j]; // matrtix multiplication
+                }
+                tmp[word_idx][i] /= sqrt(k_in[0].size());
+            }
+        }
+
+        tmp = softmax->forward(tmp);
+
+        vector<vector<double>> outputs(q_in.size(), vector<double>(q_in[0].size(), 0));
+
+        for(int word_idx=0; word_idx<q_in.size(); word_idx++){
+            for(int i=0; i<q_in[0].size(); i++){ 
+                for(int j =0; j<k_in.size(); j++){
+                    outputs[word_idx][i] += tmp[word_idx][j] * v_in[j][i]; // matrtix multiplication
+                }
+            }
+        }
+        return outputs; // shape of q_in.size() x k_in[0].size()
     }
 
     // https://stackoverflow.com/questions/74979359/how-is-position-wise-feed-forward-neural-network-implemented-for-transformers
