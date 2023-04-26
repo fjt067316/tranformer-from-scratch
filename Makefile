@@ -1,7 +1,7 @@
 CC = g++
 CFLAGS = -pthread -std=c++11 -I./classes
 TARGET = main.o
-HEADERS = transformer.h fcl.h softmax.h
+HEADERS = transformer.h fcl.h softmax.h helper.h
 
 all: $(TARGET)
 

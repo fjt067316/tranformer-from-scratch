@@ -7,7 +7,7 @@
 #include <cmath>
 #include <random>
 #include <cctype>
-
+#include "helper.h"
 #include "fcl.h"
 #include "softmax.h"
 #include "transformer.h"
@@ -17,15 +17,38 @@ using namespace std;
 
 // Load the glove6b.txt file into a hash table
 unordered_map<string, vector<double>> hash_table = load_embedding_map("glove.6B/glove.6B.50d.txt"); 
-
+unordered_map<string, int> word_to_index;
+unordered_map<int, string> index_to_word;
 vector<vector<double>>  encoder(string input);
-vector<vector<double>>  decoder(string input, vector<vector<double>> kv);
+vector<vector<double>>  decoder(string input, vector<vector<double>> kv, string outputs);
 
 int main(){
+    create_fr_word_maps("fr_words.txt",word_to_index, index_to_word);
+
+    FullyConnectedLayer* linear = new FullyConnectedLayer(50, 336520, 0.0001, 0); //336520
+    Softmax1d* softmax = new Softmax1d();
+
     vector<vector<double>> encoder_out = encoder("hello my name is josh what is your name?");
-    cout << encoder_out.size() << endl;
-    vector<vector<double>> decoder_out = decoder("my name is", encoder_out);
-    cout << decoder_out.size() << endl;
+    // take first row of decoder_out and pass it through linear layer then softmax
+
+    vector<vector<double>> decoder_out = decoder("my name is", encoder_out, "");
+    vector<double> linear_out = linear->forward(decoder_out[0]);
+    vector<double> predictions = softmax->forward(linear_out);
+
+    double max = INT32_MIN;
+    int pred_idx = 0;
+    for(int i=0; i < predictions.size(); i++){
+        if(predictions[i] > max){
+            max = predictions[i];
+            pred_idx = i;
+        }
+    }
+    cout << pred_idx << " " << max << endl;
+    cout << index_to_word[pred_idx] << endl;
+    cout << word_to_index["salut"] << endl;
+    // cout << vectorized_string.size() << endl;
+    // printVector(vectorized_string);
+    // cout << decoder_out.size() << endl;
 
     return 1;
 }
@@ -35,6 +58,7 @@ vector<vector<double>> encoder(string input) {
     // string input = "hello my name is josh what is your name?";
     vector<vector<double>> embedded_words; // will be the length of the number of words + punctuations in sentence
     // get list of encoded words
+
     string word = "";
     for (int i = 0; i < input.length(); i++) {
         if (input[i] == ' ' || ispunct(input[i]) || i == (input.length()-1)) {
@@ -64,6 +88,7 @@ vector<vector<double>> encoder(string input) {
 
     Attention* attn = new Attention(50);
 // https://glassboxmedicine.com/2019/08/15/the-transformer-attention-is-all-you-need/
+
     vector<vector<double>> attn_out = attn->single_head_attn(pos_encoded_words);
     vector<vector<double>> sub_l1 = attn->add_and_norm(attn_out);
     vector<vector<double>> feed_forward_out = attn->feed_forward(sub_l1);
@@ -78,7 +103,7 @@ vector<vector<double>> encoder(string input) {
     return sub_l2;
 }
 
-vector<vector<double>>  decoder(const string input, vector<vector<double>> kv){
+vector<vector<double>>  decoder(const string input, vector<vector<double>> kv, string outputs){
     vector<vector<double>> embedded_words; // will be the length of the number of words + punctuations in sentence
     // get list of encoded words
     string word = "";
@@ -117,6 +142,8 @@ vector<vector<double>>  decoder(const string input, vector<vector<double>> kv){
     vector<vector<double>> mha_norm = attn->add_and_norm(mha_out); 
     vector<vector<double>> feed_forward_out = attn->feed_forward(mha_norm); 
     vector<vector<double>> ffw_norm = attn->add_and_norm(feed_forward_out); 
+
+    // take first row of ffw_norm and pass it through linear layer then softmax
 
     return ffw_norm;
 
