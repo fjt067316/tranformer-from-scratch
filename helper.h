@@ -5,7 +5,7 @@
 #include <cstring>
 #include <unordered_map>
 
-
+#pragma once
 using namespace std;
 
 void printVector(const vector<vector<double>>& v) {
@@ -44,4 +44,26 @@ void create_fr_word_maps(const char* filename, unordered_map<string, int>& word_
 
     // Close the file
     fclose(file);
+}
+
+void readCSV(string fname, vector<string>& en_sentences, vector<string>& fr_sentences)
+{
+    ifstream file(fname);
+    string line;
+
+    while (std::getline(file, line))
+    {
+        // Split the line into English and French sentences using the comma separator
+        size_t comma_pos = line.find(",");
+        string en_sentence = line.substr(0, comma_pos);
+        string fr_sentence = line.substr(comma_pos + 1);
+
+        // Convert English and French sentences to lower case
+        transform(en_sentence.begin(), en_sentence.end(), en_sentence.begin(), ::tolower);
+        transform(fr_sentence.begin(), fr_sentence.end(), fr_sentence.begin(), ::tolower);
+
+        // Add the English and French sentences to their respective vectors
+        en_sentences.push_back(en_sentence);
+        fr_sentences.push_back(fr_sentence);
+    }
 }

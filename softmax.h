@@ -74,6 +74,7 @@ public:
 class Softmax {
 public:
     vector<vector<double>> last_input;
+    vector<vector<double>> last_output;
 
     Softmax(){
         return;
@@ -100,19 +101,21 @@ public:
             }
         }
 
+        last_output = output;
+
         return output;
     }
 
     vector<vector<double>> backwards(vector<vector<double>> dLdZ){ // cross_entropy dLdZ = -1/p
         vector<vector<double>> dLdZ_exp(dLdZ.size(), vector<double>(dLdZ[0].size()));
         vector<vector<double>> dout_dt(dLdZ.size(), vector<double>(dLdZ[0].size()));
-        double sum_exp = 0.0;
+        vector<double> sum_exp(dLdZ.size(), 0.0);
         vector<int> output_idx;
 
         for(int i=0; i < last_input.size(); i++){
             for(int j=0; j < last_input[0].size(); j++){
                 dLdZ_exp[i][j] = exp(last_input[i][j]); 
-                sum_exp += dLdZ_exp[i][j];
+                sum_exp[i] += dLdZ_exp[i][j];
                 if(dLdZ[i][j] < 0){ // answer selected will be negative
                     output_idx[i] = j;
             }       
@@ -121,11 +124,11 @@ public:
 
         for(int i=0; i < last_input.size(); i++){
             for(int j=0; j < last_input[0].size(); j++){
-                dout_dt[i][j] = -dLdZ_exp[i][output_idx[i]]*dLdZ_exp[i][j] / (sum_exp*sum_exp);
+                dout_dt[i][j] = -dLdZ_exp[i][output_idx[i]]*dLdZ_exp[i][j] / (sum_exp[i]*sum_exp[i]);
             }
         }
         for(int i=0; i < last_input.size(); i++){
-            dout_dt[i][output_idx[i]] = dLdZ_exp[i][output_idx[i]]*(sum_exp-dLdZ_exp[i][output_idx[i]])/(sum_exp*sum_exp);
+            dout_dt[i][output_idx[i]] = dLdZ_exp[i][output_idx[i]]*(sum_exp[i]-dLdZ_exp[i][output_idx[i]])/(sum_exp[i]*sum_exp[i]);
         }
         
         for(int i=0; i < last_input.size(); i++){

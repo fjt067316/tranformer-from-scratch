@@ -12,15 +12,22 @@ using namespace std;
 // Layer norm in transformers might be done row by row and not by entire layer ????
 class LayerNorm {
 public:
-    double gamma = 1;
-    double beta = 0;
+    vector<double> gamma;
+    vector<double>  beta;
+    vector<vector<double>> _input;
+    float learning_rate;
+    double variance;
 
-    LayerNorm() {}
+    LayerNorm(int inputs_cols, float learning_rate=0.001) : 
+    gamma(inputs_cols, 1),
+    beta(inputs_cols, 0)
+     {}
 
     vector<vector<double>> forward(vector<vector<double>> input) {
+        _input = input;
         // Compute mean and variance of the input
         double mean = 0.0;
-        double variance = 0.0;
+        variance = 0.0;
         for (int i = 0; i < input.size(); i++) {
             for(int j=0; j<input[0].size(); j++){
                 mean += input[i][j];
@@ -39,47 +46,48 @@ public:
         for (int i = 0; i < input.size(); i++) {
             for(int j=0; j<input[0].size(); j++){
                 input[i][j] = (input[i][j]-mean)/(variance+1e-9);
-                input[i][j] *= gamma;
-                input[i][j] += beta;
+                input[i][j] *= gamma[j];
+                input[i][j] += beta[j];
             }
         }
         return input;
     }
 
-    // void backward(vector<float> grad_output, vector<float>& grad_input) {
-    //     // Compute gradients with respect to gamma and beta
-    //     std::vector<float> grad_gamma(num_features_);
-    //     std::vector<float> grad_beta(num_features_);
-    //     for (int i = 0; i < num_features_; i++) {
-    //         grad_gamma[i] = grad_output[i] * input_norm_[i];
-    //         grad_beta[i] = grad_output[i];
-    //     }
+    vector<vector<double>> backward(vector<vector<double>> dLdZ) {
+        vector<double> dLdG(gamma.size(),0);
+        vector<double> dLdB(beta.size(),0);
+        double factor = dLdZ.size();
 
-    //     // Compute gradient of normalized input
-    //     std::vector<float> grad_input_norm(num_features_);
-    //     for (int i = 0; i < num_features_; i++) {
-    //         grad_input_norm[i] = grad_output[i] * gamma_[i];
-    //     }
 
-    //     // Compute gradients of mean and variance
-    //     float grad_mean = 0.0f;
-    //     float grad_variance = 0.0f;
-    //     for (int i = 0; i < num_features_; i++) {
-    //         grad_mean += grad_input_norm[i];
-    //         grad_variance += grad_input_norm[i] * (input_[i] - mean_) * -0.5f * std::pow(variance_ + eps_, -1.5f);
-    //     }
+        for (int i = 0; i < dLdZ.size(); i++) {
+            for(int j=0; j < dLdZ[0].size(); j++){
+                dLdG[j] += (_input[i][j]*dLdZ[i][j]);
+            }
+        }
+        
+        for (int i = 0; i < dLdZ.size(); i++) {
+            for(int j=0; j < dLdZ[0].size(); j++){
+                dLdB[j] += dLdZ[i][j];
+            }
+        }
 
-    //     // Compute gradient of input
-    //     grad_input.resize(num_features_);
-    //     for (int i = 0; i < num_features_; i++) {
-    //         grad_input[i] = grad_input_norm[i] * 1.0f / std::sqrt(variance_ + eps_) + grad_variance * 2.0f * (input_[i] - mean_) / num_features_ + grad_mean / num_features_;
-    //     }
+        for(int j=0; j<gamma.size(); j++){
+            dLdB[j] /= factor;
+            dLdG[j] /= factor;
+        }
 
-    //     // Update gamma and beta parameters
-    //     for (int i = 0; i < num_features_; i++) {
-    //         gamma_[i] -= lr_ * grad_gamma[i];
-    //         beta_[i] -= lr_ * grad_beta[i];
-    //     }
-    // }
+        for (int i = 0; i < dLdZ.size(); i++) {
+            for(int j=0; j < dLdZ[0].size(); j++){
+                dLdZ[i][j] = dLdZ[i][j]*gamma[j] / sqrt(variance+1e-8);
+            }
+        }
+
+        for(int i=0; i<beta.size(); i++) {
+            beta[i] -= learning_rate * dLdB[i];
+            gamma[i] -= learning_rate * dLdG[i];
+        }
+
+        return dLdZ;
+    }
 
 };

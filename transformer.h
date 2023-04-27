@@ -9,6 +9,7 @@ using namespace std;
 
 #pragma once
 
+
 // Function to load the glove6b.txt file into a hash table
 unordered_map<string, vector<double>> load_embedding_map(string filename) {
     unordered_map<string, vector<double>> hash_table;
@@ -40,6 +41,7 @@ unordered_map<string, vector<double>> load_embedding_map(string filename) {
 }
 
 
+unordered_map<string, vector<double>> hash_table = load_embedding_map("glove.6B/glove.6B.50d.txt"); 
 
 
 // Attention 
