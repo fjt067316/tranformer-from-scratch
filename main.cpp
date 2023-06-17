@@ -33,8 +33,9 @@ int main(){
     FullyConnectedLayer* linear = new FullyConnectedLayer(50, 336520, 0.0001, 0); //336520
     Softmax1d* softmax = new Softmax1d();
     Decoder* decoder = new Decoder();
+    Encoder* encoder = new Encoder();
 
-    vector<vector<double>> encoder_out = encoder(en_sentences[0]);
+    vector<vector<double>> encoder_out = encoder->forwards(en_sentences[0]);
     // take first row of decoder_out and pass it through linear layer then softmax
 
     // vector<vector<double>> decoder_out = decoder(fr_sentences[0], encoder_out);
@@ -52,11 +53,15 @@ int main(){
     }
     cout << pred_idx << " " << max << endl;
     cout << index_to_word[pred_idx] << endl;
-    cout << word_to_index["salut"] << endl;
+    // cout << word_to_index["salut"] << endl;
     vector<double> dLdZ(predictions.size(), 0);
     dLdZ[word_to_index["salut"]] = -1 / (predictions[word_to_index["salut"]]+1e-8);
     dLdZ = softmax->backwards(dLdZ);
     dLdZ = linear->backwards(dLdZ);
+    // vector<vector<double>> dLdZ_2d = decoder->backwards(dLdZ);
+    // cout << dLdZ_2d.size() << endl;
+    // encoder->backwards(dLdZ_2d);
+
 
     return 1;
 }
